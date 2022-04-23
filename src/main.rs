@@ -25,6 +25,16 @@ impl ToMine {
         }
     }
 }
+fn tr(buf: &Vec<u8>) -> String {
+    String::from_utf8_lossy(&buf)
+        .to_string()
+        .trim()
+        .trim_matches('\u{0}')
+        .trim_matches('\n')
+        .trim()
+        .to_string()
+}
+
 #[tokio::main]
 async fn main() {
     let mut tcpstream = TcpStream::connect("51.159.175.20:6043").await.unwrap();
@@ -38,22 +48,27 @@ async fn main() {
             .await
             .unwrap();
         tcpstream.read(&mut buf).await.unwrap();
-        while String::from_utf8_lossy(&buf)
-            .to_string()
-            .trim()
-            .trim_matches('\u{0}')
-            .trim_matches('\n')
-            .trim()
-            == ""
-            || String::from_utf8_lossy(&buf)
-                .to_string()
-                .trim()
-                .trim_matches('\u{0}')
-                .trim_matches('\n')
-                .trim()
-                == "GOOD"
+        while tr(&buf) == ""
+            || tr(&buf) == "GOOD"
+            || tr(&buf) == "BLOCK"
+            || tr(&buf) == "BAD"
+            || tr(&buf) == "INVU"
         {
+            if tr(&buf) == "INVU" {
+                println!("Invalid user {}", String::from_utf8_lossy(&buf));
+                break;
+            }
+            if tr(&buf) == "GOOD" {
+                println!("Good job {}", String::from_utf8_lossy(&buf));
+            }
+            if tr(&buf) == "BLOCK" {
+                println!("Block {}", String::from_utf8_lossy(&buf));
+            }
+            if tr(&buf) == "BAD" {
+                println!("Bad job {}", String::from_utf8_lossy(&buf));
+            }
             tcpstream.read(&mut buf).await.unwrap();
+            
         }
 
         let hash = String::from_utf8_lossy(&buf).to_string().trim().to_string();
