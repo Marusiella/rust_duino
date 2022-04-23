@@ -1,0 +1,45 @@
+{
+    // Użyj funkcji IntelliSense, aby uzyskać informacje o możliwych atrybutach.
+    // Najedź kursorem, aby wyświetlić opisy istniejących atrybutów.
+    // Aby uzyskać więcej informacji, odwiedź stronę: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'websocket_rust_tokio'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=websocket_rust_tokio",
+                    "--package=websocket_rust_tokio"
+                ],
+                "filter": {
+                    "name": "websocket_rust_tokio",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'websocket_rust_tokio'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=websocket_rust_tokio",
+                    "--package=websocket_rust_tokio"
+                ],
+                "filter": {
+                    "name": "websocket_rust_tokio",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
