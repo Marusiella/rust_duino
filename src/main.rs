@@ -37,14 +37,16 @@ fn tr(buf: &Vec<u8>) -> String {
 
 #[tokio::main]
 async fn main() {
+    let username = get_user_imput();
     let mut tcpstream = TcpStream::connect("51.159.175.20:6043").await.unwrap();
     let mut buf = vec![0; 1024];
     tcpstream.read(&mut buf).await.unwrap();
     println!("Server version is: {}", String::from_utf8_lossy(&buf));
+    
     loop {
         let mut buf = vec![0; 1024];
         tcpstream
-            .write(b"JOB,Mareczekk,EXTRIME,test")
+            .write(format!("JOB,{},EXTRIME,test",username).as_bytes())
             .await
             .unwrap();
         tcpstream.read(&mut buf).await.unwrap();
@@ -115,5 +117,25 @@ async fn main() {
             .unwrap();
         buf.clear();
         tcpstream.read(&mut buf).await.unwrap();
+    }
+}
+
+fn get_user_imput() -> String {
+    use std::io::{stdin,stdout,Write};
+    let mut s=String::new();
+    print!("Please enter some username: ");
+    let _=stdout().flush();
+    stdin().read_line(&mut s).expect("Did not enter a correct string");
+    if let Some('\n')=s.chars().next_back() {
+        s.pop();
+    }
+    if let Some('\r')=s.chars().next_back() {
+        s.pop();
+    }
+
+    if s == "" {
+        "Mareczekk".to_string()
+    } else {
+        s.trim().to_string()
     }
 }
