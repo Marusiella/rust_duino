@@ -85,7 +85,6 @@ async fn main() {
             "hashrate is {} kH/s",
             (thisNumber as f64 / time_of_doing) / 1000.0
         );
-        // before to unix time
         println!(
             "{}",
             time::SystemTime::now()
@@ -99,15 +98,5 @@ async fn main() {
             .unwrap();
         buf.clear();
         tcpstream.read(&mut buf).await.unwrap();
-        // println!("z {}", String::from_utf8_lossy(&buf));
     }
 }
-// use std::time;
-// fn main() {
-//     // print current time as python as well
-//     // time.time()
-//     let timees = time::SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap().as_secs_f64();
-//     println!("1.5700244903564453");
-//     std::thread::sleep(time::Duration::from_secs(2));
-//     println!("{}", time::SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap().as_secs_f64() - timees);
-// }
