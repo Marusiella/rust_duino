@@ -11,15 +11,14 @@ struct ToMine {
 }
 impl ToMine {
     fn new(msg: String) -> Self {
-        let data = msg.split(",").collect::<Vec<&str>>();
-        println!("{:?} data z msg", data);
+        let data = msg.trim_matches('\u{0}')
+        .trim_matches('\n')
+        .trim().split(",").collect::<Vec<&str>>();
+        println!("{:?} data from msg", data);
         ToMine {
             from: data[0].to_owned(),
             to: data[1].to_owned(),
             difficulty: data[2]
-                .trim_matches('\u{0}')
-                .trim_matches('\n')
-                .trim()
                 .parse::<u128>()
                 .unwrap(),
         }
@@ -54,8 +53,6 @@ async fn main() {
         }
 
         let hash = String::from_utf8_lossy(&buf).to_string().trim().to_string();
-        let converted = hash.trim_matches('\u{0}').trim_matches('\n').trim();
-        println!("{}", converted);
         let to_mine = ToMine::new(hash);
         // print!("{:?}", to_mine);
         use sha1::{Digest, Sha1};
@@ -77,7 +74,6 @@ async fn main() {
                 thisNumber = result;
                 break;
             }
-            // println!("{} |  {}", format!("{:x}", hasher.clone().finalize()), to_mine.to);
         }
         let time_of_doing = time::SystemTime::now()
             .duration_since(time::UNIX_EPOCH)
@@ -103,7 +99,7 @@ async fn main() {
             .unwrap();
         buf.clear();
         tcpstream.read(&mut buf).await.unwrap();
-        println!("z {}", String::from_utf8_lossy(&buf));
+        // println!("z {}", String::from_utf8_lossy(&buf));
     }
 }
 // use std::time;
