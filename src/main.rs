@@ -1,4 +1,4 @@
-use std::time;
+use std::{sync::mpsc, time, vec};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -34,7 +34,6 @@ fn tr(buf: &Vec<u8>) -> String {
         .trim()
         .to_string()
 }
-
 #[tokio::main]
 async fn main() {
     let username = get_user_imput();
@@ -70,46 +69,78 @@ async fn main() {
                 println!("Bad job {}", String::from_utf8_lossy(&buf));
             }
             tcpstream.read(&mut buf).await.unwrap();
-            
         }
-
         let hash = String::from_utf8_lossy(&buf).to_string().trim().to_string();
         let to_mine = ToMine::new(hash);
         use sha1::{Digest, Sha1};
         let mut hasher = Sha1::new();
-
         let timel = time::SystemTime::now()
             .duration_since(time::UNIX_EPOCH)
             .unwrap()
             .as_secs_f64();
-
         hasher.update(to_mine.from.as_bytes());
+        let threads: usize = num_cpus::get();
+        println!("U have {} threads", threads);
+        let number_for_thread = ((100 * to_mine.difficulty) + 1) / threads as u128;
         let mut found = 0;
-        for result in 0..((100 * to_mine.difficulty) + 1) {
-            let mut hasher = hasher.clone();
-            hasher.update(result.to_string().as_bytes());
-            if to_mine.to == format!("{:x}", hasher.clone().finalize()) {
-                println!("{}", result);
-                found = result;
+        let mut chanel_vec = vec![];
+        let mut chanel_vec2 = vec![];
+        for x in 0..=threads {
+            let (tx, rx) = mpsc::channel::<u128>();
+            let (tx2, rx2) = mpsc::channel::<bool>();
+            let to_mine = to_mine.to.clone();
+            let hasher = hasher.clone();
+            println!("spawned thread {}", x);
+            std::thread::spawn(move || {
+                for result in number_for_thread * (x as u128-1)..number_for_thread * x as u128 {
+                    if let Ok(resulte) = rx2.try_recv() {
+                        if resulte {
+                            println!("Stoped at {}", result);
+                            break;
+                        }
+                    }
+                    let mut hasher = hasher.clone();
+                    hasher.update(result.to_string().as_bytes());
+                    if to_mine.clone() == format!("{:x}", hasher.clone().finalize()) {
+                        println!("{} thread {} found", result, &x);
+                        tx.send(result).unwrap();
+                        break;
+                    }
+                    if result % 100_000_00 == 0 {
+                        println!("{} thread id: {}", result, x);
+                    }
+                }
+            });
+            chanel_vec.push(rx);
+            chanel_vec2.push(tx2);
+        }
+        loop {
+            for x in 0..chanel_vec.len() {
+                if let Ok(result) = chanel_vec[x].try_recv() {
+                    found = result;
+                    break;
+                }
+            }
+            if found != 0 {
+                for x in 0..chanel_vec.len() {
+                    match chanel_vec2[x].send(true) {
+                        Ok(_) => (),
+                        Err(_) => (),
+                    }
+                }
                 break;
             }
+            std::thread::sleep(time::Duration::from_millis(10));
         }
         let time_of_doing = time::SystemTime::now()
             .duration_since(time::UNIX_EPOCH)
             .unwrap()
             .as_secs_f64()
             - timel;
-        println!("{}", time_of_doing);
+        println!("it took {}s", time_of_doing);
         println!(
             "hashrate is {} kH/s",
             (found as f64 / time_of_doing) / 1000.0
-        );
-        println!(
-            "{}",
-            time::SystemTime::now()
-                .duration_since(time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs_f64()
         );
         tcpstream
             .write(format!("{},{},RUST", found, found as f64 / time_of_doing).as_bytes())
