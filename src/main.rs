@@ -43,7 +43,7 @@ async fn main() {
     loop {
         let mut buf = vec![0; 1024];
         tcpstream
-            .write(b"JOB,Mareczekk,EXTRIME,test")
+            .write(b"JOB,Mareczekk,EXTREME,test")
             .await
             .unwrap();
         tcpstream.read(&mut buf).await.unwrap();
@@ -80,7 +80,6 @@ async fn main() {
         const THREADS: u128 = 12;
         let number_for_thread = ((100 * to_mine.difficulty) + 1) / THREADS as u128;
         let mut found = 0;
-        let mut thread_vec = vec![];
         let mut chanel_vec = vec![];
         let mut chanel_vec2 = vec![];
         for x in 0..=THREADS {
@@ -89,7 +88,7 @@ async fn main() {
             let to_mine = to_mine.to.clone();
             let hasher = hasher.clone();
             println!("spawned thread {}", x);
-            thread_vec.push(std::thread::spawn(move || {
+            std::thread::spawn(move || {
                 for result in number_for_thread * (x-1)..number_for_thread * x {
                     if let Ok(resulte) = rx2.try_recv() {
                         if resulte {
@@ -108,7 +107,7 @@ async fn main() {
                         println!("{} thread id: {}", result, x);
                     }
                 }
-            }));
+            });
             chanel_vec.push(rx);
             chanel_vec2.push(tx2);
         }
