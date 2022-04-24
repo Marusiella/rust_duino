@@ -130,15 +130,6 @@ async fn main() {
             }
             std::thread::sleep(time::Duration::from_millis(10));
         }
-        // for result in 0..((100 * to_mine.difficulty) + 1) {
-        //     let mut hasher = hasher.clone();
-        //     hasher.update(result.to_string().as_bytes());
-        //     if to_mine.to == format!("{:x}", hasher.clone().finalize()) {
-        //         println!("{}", result);
-        //         found = result;
-        //         break;
-        //     }
-        // }
         let time_of_doing = time::SystemTime::now()
             .duration_since(time::UNIX_EPOCH)
             .unwrap()
@@ -148,13 +139,6 @@ async fn main() {
         println!(
             "hashrate is {} kH/s",
             (found as f64 / time_of_doing) / 1000.0
-        );
-        println!(
-            "{}",
-            time::SystemTime::now()
-                .duration_since(time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs_f64()
         );
         tcpstream
             .write(format!("{},{},RUST", found, found as f64 / time_of_doing).as_bytes())
