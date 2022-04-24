@@ -1,4 +1,5 @@
 use std::{sync::mpsc, time, vec};
+use serde::Deserialize;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -16,6 +17,17 @@ struct Args {
     // Set number of threads to use
     #[clap(short, long, default_value = "0")]
     threads: u8,
+    // Set the difficulty of the mining
+    #[clap(short, long, default_value = "EXTRIME", possible_values = &["EXTRIME", "HIGH", "MEDIUM", "LOW"])]
+    difficulty: String,
+}
+#[derive(Deserialize)]
+struct DuinoPool {
+    ip: String,
+    name: String,
+    port: i64,
+    server: String,
+    success: bool,
 }
 
 #[derive(Debug)]
@@ -53,7 +65,13 @@ fn tr(buf: &Vec<u8>) -> String {
 async fn main() {
     let args = Args::parse();
     println!("Hello {}!", args.username);
-    let mut tcpstream = TcpStream::connect("51.159.175.20:6043").await.unwrap();
+    println!("Getting pool...");
+    let resp = reqwest::get("https://server.duinocoin.com/getPool")
+        .await.expect("Can't get pool")
+        .json::<DuinoPool>()
+        .await.expect("Can't get pool");
+    println!("Using pool: {} |  {}:{}", resp.name, resp.server, resp.port);
+    let mut tcpstream = TcpStream::connect(format!("{}:{}",resp.server,resp.port)).await.unwrap();
     let mut buf = vec![0; 1024];
     tcpstream.read(&mut buf).await.unwrap();
     println!("Server version is: {}", String::from_utf8_lossy(&buf));
@@ -61,7 +79,7 @@ async fn main() {
     loop {
         let mut buf = vec![0; 1024];
         tcpstream
-            .write(format!("JOB,{},EXTRIME,test", args.username).as_bytes())
+            .write(format!("JOB,{},{},test", args.username,args.difficulty).as_bytes())
             .await
             .unwrap();
         tcpstream.read(&mut buf).await.unwrap();
