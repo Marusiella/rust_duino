@@ -3,6 +3,18 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
+
+use clap::Parser;
+
+// Simple multi-threaded duino miner written in Rust.
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    // Your miner username
+    #[clap(short, long,required = true)]
+    username: String,
+}
+
 #[derive(Debug)]
 struct ToMine {
     from: String,
@@ -36,7 +48,9 @@ fn tr(buf: &Vec<u8>) -> String {
 }
 #[tokio::main]
 async fn main() {
-    let username = get_user_imput();
+    let args = Args::parse();
+    println!("Hello {}!", args.username);
+    // let username = get_user_imput();
     let mut tcpstream = TcpStream::connect("51.159.175.20:6043").await.unwrap();
     let mut buf = vec![0; 1024];
     tcpstream.read(&mut buf).await.unwrap();
@@ -45,7 +59,7 @@ async fn main() {
     loop {
         let mut buf = vec![0; 1024];
         tcpstream
-            .write(format!("JOB,{},EXTRIME,test",username).as_bytes())
+            .write(format!("JOB,{},EXTRIME,test",args.username).as_bytes())
             .await
             .unwrap();
         tcpstream.read(&mut buf).await.unwrap();
@@ -148,25 +162,5 @@ async fn main() {
             .unwrap();
         buf.clear();
         tcpstream.read(&mut buf).await.unwrap();
-    }
-}
-
-fn get_user_imput() -> String {
-    use std::io::{stdin,stdout,Write};
-    let mut s=String::new();
-    print!("Please enter some username: ");
-    let _=stdout().flush();
-    stdin().read_line(&mut s).expect("Did not enter a correct string");
-    if let Some('\n')=s.chars().next_back() {
-        s.pop();
-    }
-    if let Some('\r')=s.chars().next_back() {
-        s.pop();
-    }
-
-    if s == "" {
-        "Mareczekk".to_string()
-    } else {
-        s.trim().to_string()
     }
 }
