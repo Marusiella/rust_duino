@@ -53,7 +53,6 @@ fn tr(buf: &Vec<u8>) -> String {
 async fn main() {
     let args = Args::parse();
     println!("Hello {}!", args.username);
-    // let username = get_user_imput();
     let mut tcpstream = TcpStream::connect("51.159.175.20:6043").await.unwrap();
     let mut buf = vec![0; 1024];
     tcpstream.read(&mut buf).await.unwrap();
@@ -105,7 +104,7 @@ async fn main() {
         let mut found = 0;
         let mut chanel_vec = vec![];
         let mut chanel_vec2 = vec![];
-        for x in 0..=threads {
+        for x in 1..=threads {
             let (tx, rx) = mpsc::channel::<u128>();
             let (tx2, rx2) = mpsc::channel::<bool>();
             let to_mine = to_mine.to.clone();
