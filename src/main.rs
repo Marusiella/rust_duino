@@ -11,8 +11,11 @@ use clap::Parser;
 #[clap(author, version, about, long_about = None)]
 struct Args {
     // Your miner username
-    #[clap(short, long,required = true)]
+    #[clap(short, long, required = true)]
     username: String,
+    // Set number of threads to use
+    #[clap(short, long, default_value = "0")]
+    threads: u8,
 }
 
 #[derive(Debug)]
@@ -55,11 +58,11 @@ async fn main() {
     let mut buf = vec![0; 1024];
     tcpstream.read(&mut buf).await.unwrap();
     println!("Server version is: {}", String::from_utf8_lossy(&buf));
-    
+
     loop {
         let mut buf = vec![0; 1024];
         tcpstream
-            .write(format!("JOB,{},EXTRIME,test",args.username).as_bytes())
+            .write(format!("JOB,{},EXTRIME,test", args.username).as_bytes())
             .await
             .unwrap();
         tcpstream.read(&mut buf).await.unwrap();
@@ -93,8 +96,11 @@ async fn main() {
             .unwrap()
             .as_secs_f64();
         hasher.update(to_mine.from.as_bytes());
-        let threads: usize = num_cpus::get();
-        println!("U have {} threads", threads);
+        let threads: usize = match args.threads {
+            0 => num_cpus::get(),
+            _ => args.threads as usize,
+        };
+        println!("using {} threads", threads);
         let number_for_thread = ((100 * to_mine.difficulty) + 1) / threads as u128;
         let mut found = 0;
         let mut chanel_vec = vec![];
@@ -106,7 +112,7 @@ async fn main() {
             let hasher = hasher.clone();
             println!("spawned thread {}", x);
             std::thread::spawn(move || {
-                for result in number_for_thread * (x as u128-1)..number_for_thread * x as u128 {
+                for result in number_for_thread * (x as u128 - 1)..number_for_thread * x as u128 {
                     if let Ok(resulte) = rx2.try_recv() {
                         if resulte {
                             println!("Stoped at {}", result);
