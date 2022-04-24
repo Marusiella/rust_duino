@@ -70,8 +70,8 @@ async fn main() {
         .await.expect("Can't get pool")
         .json::<DuinoPool>()
         .await.expect("Can't get pool");
-    println!("Using pool: {} |  {}:{}", resp.name, resp.server, resp.port);
-    let mut tcpstream = TcpStream::connect(format!("{}:{}",resp.server,resp.port)).await.unwrap();
+    println!("Using pool: {} |  {}:{}", resp.name, resp.ip, resp.port);
+    let mut tcpstream = TcpStream::connect(format!("{}:{}",resp.ip,resp.port)).await.unwrap();
     let mut buf = vec![0; 1024];
     tcpstream.read(&mut buf).await.unwrap();
     println!("Server version is: {}", String::from_utf8_lossy(&buf));
