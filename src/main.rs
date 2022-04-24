@@ -90,9 +90,9 @@ async fn main() {
             let hasher = hasher.clone();
             println!("spawned thread {}", x);
             thread_vec.push(std::thread::spawn(move || {
-                for result in 0..number_for_thread * x {
-                    if let Ok(result) = rx2.try_recv() {
-                        if result {
+                for result in number_for_thread * (x-1)..number_for_thread * x {
+                    if let Ok(resulte) = rx2.try_recv() {
+                        if resulte {
                             println!("Stoped at {}", result);
                             break;
                         }
@@ -100,9 +100,12 @@ async fn main() {
                     let mut hasher = hasher.clone();
                     hasher.update(result.to_string().as_bytes());
                     if to_mine.clone() == format!("{:x}", hasher.clone().finalize()) {
-                        println!("{}", result);
+                        println!("{} thread {} found", result, &x);
                         tx.send(result).unwrap();
                         break;
+                    }
+                    if result % 100_000_00 == 0 {
+                        println!("{} thread id: {}", result, x);
                     }
                 }
             }));
@@ -118,21 +121,24 @@ async fn main() {
             }
             if found != 0 {
                 for x in 0..chanel_vec.len() {
-                    chanel_vec2[x].send(true).unwrap();
+                    match chanel_vec2[x].send(true) {
+                        Ok(_) => (),
+                        Err(_) => (),
+                    }
                 }
                 break;
             }
             std::thread::sleep(time::Duration::from_millis(10));
         }
-        for result in 0..((100 * to_mine.difficulty) + 1) {
-            let mut hasher = hasher.clone();
-            hasher.update(result.to_string().as_bytes());
-            if to_mine.to == format!("{:x}", hasher.clone().finalize()) {
-                println!("{}", result);
-                found = result;
-                break;
-            }
-        }
+        // for result in 0..((100 * to_mine.difficulty) + 1) {
+        //     let mut hasher = hasher.clone();
+        //     hasher.update(result.to_string().as_bytes());
+        //     if to_mine.to == format!("{:x}", hasher.clone().finalize()) {
+        //         println!("{}", result);
+        //         found = result;
+        //         break;
+        //     }
+        // }
         let time_of_doing = time::SystemTime::now()
             .duration_since(time::UNIX_EPOCH)
             .unwrap()
