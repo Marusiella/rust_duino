@@ -134,7 +134,7 @@ async fn main() {
             .unwrap()
             .as_secs_f64()
             - timel;
-        println!("{}", time_of_doing);
+        println!("it took {}s", time_of_doing);
         println!(
             "hashrate is {} kH/s",
             (found as f64 / time_of_doing) / 1000.0
