@@ -2,13 +2,13 @@ use serde::Deserialize;
 use std::{sync::mpsc, time, vec};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpStream,
+    net::TcpStream
 };
 
 use clap::Parser;
 
 // Simple multi-threaded duino miner written in Rust.
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
     // Your miner username
@@ -24,7 +24,7 @@ struct Args {
     #[clap(short, long, default_value = "multithread_one", possible_values = &["multithread_one", "multithread_multi"])]
     mining_type: String,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct DuinoPool {
     ip: String,
     name: String,
@@ -76,37 +76,39 @@ async fn main() {
         .await
         .expect("Can't get pool");
     println!("Using pool: {} |  {}:{}", resp.name, resp.ip, resp.port);
-    let mut tcpstream = TcpStream::connect(format!("{}:{}", resp.ip, resp.port))
+    
+    if args.mining_type == "multithread_one" {
+        let mut tcpstream = TcpStream::connect(format!("{}:{}", resp.ip, resp.port))
         .await
         .unwrap();
     let mut buf = vec![0; 1024];
     tcpstream.read(&mut buf).await.unwrap();
     println!("Server version is: {}", String::from_utf8_lossy(&buf));
-    if args.mining_type == "multithread_one" {
         first_type_mining(&mut tcpstream, &args).await;
     } else {
         let threads: usize = match args.threads {
             0 => num_cpus::get(),
             _ => args.threads as usize,
         };
+        let mut threads_vec = vec![];
         for _ in 0..=threads {
-            let args = Args::parse();
-            println!("Hello {}!", args.username);
-            println!("Getting pool...");
-            let resp = reqwest::get("https://server.duinocoin.com/getPool")
-                .await
-                .expect("Can't get pool")
-                .json::<DuinoPool>()
-                .await
-                .expect("Can't get pool");
-            println!("Using pool: {} |  {}:{}", resp.name, resp.ip, resp.port);
-            let mut tcpstream = TcpStream::connect(format!("{}:{}", resp.ip, resp.port))
+            let args = args.clone();
+            let resp = resp.clone();
+            threads_vec.push(tokio::spawn(async move {
+                let mut tcpstream = TcpStream::connect(format!("{}:{}", resp.ip, resp.port))
                 .await
                 .unwrap();
             let mut buf = vec![0; 1024];
             tcpstream.read(&mut buf).await.unwrap();
             println!("Server version is: {}", String::from_utf8_lossy(&buf));
-            tokio::spawn(async move { first_type_mining(&mut tcpstream, &args).await }).await.unwrap();
+            second_type_mining(&mut tcpstream, &args).await ;
+            }));
+        }
+        for thread in threads_vec {
+            thread.await.unwrap();
+        }
+        loop {
+            tokio::time::sleep(time::Duration::from_secs(1)).await;
         }
     }
 }
