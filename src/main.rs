@@ -1,5 +1,5 @@
-use std::{sync::mpsc, time, vec};
 use serde::Deserialize;
+use std::{sync::mpsc, time, vec};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -20,6 +20,9 @@ struct Args {
     // Set the difficulty of the mining
     #[clap(short, long, default_value = "EXTRIME", possible_values = &["EXTRIME", "HIGH", "MEDIUM", "LOW"])]
     difficulty: String,
+    // type of mining
+    #[clap(short, long, default_value = "multithread_one", possible_values = &["multithread_one", "multithread_multi"])]
+    mining_type: String,
 }
 #[derive(Deserialize)]
 struct DuinoPool {
@@ -67,19 +70,51 @@ async fn main() {
     println!("Hello {}!", args.username);
     println!("Getting pool...");
     let resp = reqwest::get("https://server.duinocoin.com/getPool")
-        .await.expect("Can't get pool")
+        .await
+        .expect("Can't get pool")
         .json::<DuinoPool>()
-        .await.expect("Can't get pool");
+        .await
+        .expect("Can't get pool");
     println!("Using pool: {} |  {}:{}", resp.name, resp.ip, resp.port);
-    let mut tcpstream = TcpStream::connect(format!("{}:{}",resp.ip,resp.port)).await.unwrap();
+    let mut tcpstream = TcpStream::connect(format!("{}:{}", resp.ip, resp.port))
+        .await
+        .unwrap();
     let mut buf = vec![0; 1024];
     tcpstream.read(&mut buf).await.unwrap();
     println!("Server version is: {}", String::from_utf8_lossy(&buf));
-
+    if args.mining_type == "multithread_one" {
+        first_type_mining(&mut tcpstream, &args).await;
+    } else {
+        let threads: usize = match args.threads {
+            0 => num_cpus::get(),
+            _ => args.threads as usize,
+        };
+        for _ in 0..=threads {
+            let args = Args::parse();
+            println!("Hello {}!", args.username);
+            println!("Getting pool...");
+            let resp = reqwest::get("https://server.duinocoin.com/getPool")
+                .await
+                .expect("Can't get pool")
+                .json::<DuinoPool>()
+                .await
+                .expect("Can't get pool");
+            println!("Using pool: {} |  {}:{}", resp.name, resp.ip, resp.port);
+            let mut tcpstream = TcpStream::connect(format!("{}:{}", resp.ip, resp.port))
+                .await
+                .unwrap();
+            let mut buf = vec![0; 1024];
+            tcpstream.read(&mut buf).await.unwrap();
+            println!("Server version is: {}", String::from_utf8_lossy(&buf));
+            tokio::spawn(async move { first_type_mining(&mut tcpstream, &args).await }).await.unwrap();
+        }
+    }
+}
+async fn first_type_mining(tcpstream: &mut TcpStream, args: &Args) {
     loop {
         let mut buf = vec![0; 1024];
         tcpstream
-            .write(format!("JOB,{},{},test", args.username,args.difficulty).as_bytes())
+            .write(format!("JOB,{},{},test", args.username, args.difficulty).as_bytes())
             .await
             .unwrap();
         tcpstream.read(&mut buf).await.unwrap();
@@ -185,5 +220,82 @@ async fn main() {
             .unwrap();
         buf.clear();
         tcpstream.read(&mut buf).await.unwrap();
+    }
+}
+async fn second_type_mining(tcpstream: &mut TcpStream, args: &Args) {
+    loop {
+        let mut buf = vec![0; 1024];
+        tcpstream
+            .write(format!("JOB,{},{},test", args.username, args.difficulty).as_bytes())
+            .await
+            .unwrap();
+        tcpstream.read(&mut buf).await.unwrap();
+        while tr(&buf) == ""
+            || tr(&buf) == "GOOD"
+            || tr(&buf) == "BLOCK"
+            || tr(&buf) == "BAD"
+            || tr(&buf) == "INVU"
+        {
+            if tr(&buf) == "INVU" {
+                println!("Invalid user {}", String::from_utf8_lossy(&buf));
+                break;
+            }
+            if tr(&buf) == "GOOD" {
+                println!("Good job {}", String::from_utf8_lossy(&buf));
+            }
+            if tr(&buf) == "BLOCK" {
+                println!("Block {}", String::from_utf8_lossy(&buf));
+            }
+            if tr(&buf) == "BAD" {
+                println!("Bad job {}", String::from_utf8_lossy(&buf));
+            }
+            tcpstream.read(&mut buf).await.unwrap();
+        }
+        let hash = String::from_utf8_lossy(&buf).to_string().trim().to_string();
+        let to_mine = ToMine::new(hash);
+        use sha1::{Digest, Sha1};
+        let mut hasher = Sha1::new();
+        let timel = time::SystemTime::now()
+            .duration_since(time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f64();
+        hasher.update(to_mine.from.as_bytes());
+
+        let mut thisNumber = 0;
+        for result in 0..((100 * to_mine.difficulty) + 1) {
+            let mut hasher = hasher.clone();
+            hasher.update(result.to_string().as_bytes());
+            if to_mine.to == format!("{:x}", hasher.clone().finalize()) {
+                println!("{}", result);
+                thisNumber = result;
+                break;
+            }
+            // println!("{} |  {}", format!("{:x}", hasher.clone().finalize()), to_mine.to);
+        }
+        let time_of_doing = time::SystemTime::now()
+            .duration_since(time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f64()
+            - timel;
+        println!("{}", time_of_doing);
+        println!(
+            "hashrate is {} kH/s",
+            (thisNumber as f64 / time_of_doing) / 1000.0
+        );
+        // before to unix time
+        println!(
+            "{}",
+            time::SystemTime::now()
+                .duration_since(time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs_f64()
+        );
+        tcpstream
+            .write(format!("{},{},RUST", thisNumber, thisNumber as f64 / time_of_doing).as_bytes())
+            .await
+            .unwrap();
+        buf.clear();
+        tcpstream.read(&mut buf).await.unwrap();
+        println!("z {}", String::from_utf8_lossy(&buf));
     }
 }
