@@ -28,9 +28,7 @@ struct Args {
 struct DuinoPool {
     ip: String,
     name: String,
-    port: i64,
-    server: String,
-    success: bool,
+    port: i64
 }
 
 #[derive(Debug)]
@@ -263,13 +261,13 @@ async fn second_type_mining(tcpstream: &mut TcpStream, args: &Args) {
             .as_secs_f64();
         hasher.update(to_mine.from.as_bytes());
 
-        let mut thisNumber = 0;
+        let mut this_number = 0;
         for result in 0..((100 * to_mine.difficulty) + 1) {
             let mut hasher = hasher.clone();
             hasher.update(result.to_string().as_bytes());
             if to_mine.to == format!("{:x}", hasher.clone().finalize()) {
                 println!("{}", result);
-                thisNumber = result;
+                this_number = result;
                 break;
             }
             // println!("{} |  {}", format!("{:x}", hasher.clone().finalize()), to_mine.to);
@@ -282,7 +280,7 @@ async fn second_type_mining(tcpstream: &mut TcpStream, args: &Args) {
         println!("{}", time_of_doing);
         println!(
             "hashrate is {} kH/s",
-            (thisNumber as f64 / time_of_doing) / 1000.0
+            (this_number as f64 / time_of_doing) / 1000.0
         );
         // before to unix time
         println!(
@@ -293,7 +291,7 @@ async fn second_type_mining(tcpstream: &mut TcpStream, args: &Args) {
                 .as_secs_f64()
         );
         tcpstream
-            .write(format!("{},{},RUST", thisNumber, thisNumber as f64 / time_of_doing).as_bytes())
+            .write(format!("{},{},RUST", this_number, this_number as f64 / time_of_doing).as_bytes())
             .await
             .unwrap();
         buf.clear();
