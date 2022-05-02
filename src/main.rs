@@ -43,7 +43,7 @@ impl ToMine {
             .trim_matches('\u{0}')
             .trim_matches('\n')
             .trim()
-            .split(",")
+            .split(',')
             .collect::<Vec<&str>>();
         println!("{:?} data from msg", data);
         ToMine {
@@ -54,7 +54,7 @@ impl ToMine {
     }
 }
 fn tr(buf: &Vec<u8>) -> String {
-    String::from_utf8_lossy(&buf)
+    String::from_utf8_lossy(buf)
         .to_string()
         .trim()
         .trim_matches('\u{0}')
@@ -81,7 +81,7 @@ async fn main() {
             Ok(socket) => socket.unwrap(),
             Err(_) => {
                 println!("Can't connect to the assigned pool");
-                TcpStream::connect(format!("server.duinocoin.com:2813")).await.unwrap()
+                TcpStream::connect("server.duinocoin.com:2813".to_string()).await.unwrap()
             }
         };
     let mut buf = vec![0; 1024];
@@ -103,7 +103,7 @@ async fn main() {
             Ok(socket) => socket.unwrap(),
             Err(_) => {
                 println!("Can't connect to the assigned pool");
-                TcpStream::connect(format!("server.duinocoin.com:2813")).await.unwrap()
+                TcpStream::connect("server.duinocoin.com:2813".to_string()).await.unwrap()
             }
         };
             let mut buf = vec![0; 1024];
@@ -128,7 +128,7 @@ async fn first_type_mining(tcpstream: &mut TcpStream, args: &Args) {
             .await
             .unwrap();
         tcpstream.read(&mut buf).await.unwrap();
-        while tr(&buf) == ""
+        while tr(&buf).is_empty()
             || tr(&buf) == "GOOD"
             || tr(&buf) == "BLOCK"
             || tr(&buf) == "BAD"
@@ -188,7 +188,7 @@ async fn first_type_mining(tcpstream: &mut TcpStream, args: &Args) {
                         tx.send(result).unwrap();
                         break;
                     }
-                    if result % 100_000_00 == 0 {
+                    if result % 10_000_000 == 0 {
                         println!("{} thread id: {}", result, x);
                     }
                 }
@@ -240,7 +240,7 @@ async fn second_type_mining(tcpstream: &mut TcpStream, args: &Args) {
             .await
             .unwrap();
         tcpstream.read(&mut buf).await.unwrap();
-        while tr(&buf) == ""
+        while tr(&buf).is_empty()
             || tr(&buf) == "GOOD"
             || tr(&buf) == "BLOCK"
             || tr(&buf) == "BAD"
