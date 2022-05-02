@@ -53,7 +53,7 @@ impl ToMine {
         }
     }
 }
-fn tr(buf: &Vec<u8>) -> String {
+fn tr(buf: &[u8]) -> String {
     String::from_utf8_lossy(buf)
         .to_string()
         .trim()
@@ -197,18 +197,15 @@ async fn first_type_mining(tcpstream: &mut TcpStream, args: &Args) {
             chanel_vec2.push(tx2);
         }
         loop {
-            for x in 0..chanel_vec.len() {
-                if let Ok(result) = chanel_vec[x].try_recv() {
+            for item in &chanel_vec {
+                if let Ok(result) = item.try_recv() {
                     found = result;
                     break;
                 }
             }
             if found != 0 {
-                for x in 0..chanel_vec.len() {
-                    match chanel_vec2[x].send(true) {
-                        Ok(_) => (),
-                        Err(_) => (),
-                    }
+                for item in chanel_vec2 {
+                    if item.send(true).is_ok() { println!("Sended stop to thread"); }
                 }
                 break;
             }
