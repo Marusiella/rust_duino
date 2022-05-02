@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::{sync::mpsc, time, vec};
+use std::{sync::mpsc, time::{self, Duration}, vec};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream
@@ -76,9 +76,14 @@ async fn main() {
     println!("Using pool: {} |  {}:{}", resp.name, resp.ip, resp.port);
     
     if args.mining_type == "multithread_one" {
-        let mut tcpstream = TcpStream::connect(format!("{}:{}", resp.ip, resp.port))
-        .await
-        .unwrap();
+        let mut tcpstream = match tokio::time::timeout(Duration::from_secs(3), TcpStream::connect(format!("{}:{}", resp.ip, resp.port))
+        ).await {
+            Ok(socket) => socket.unwrap(),
+            Err(_) => {
+                println!("Can't connect to the assigned pool");
+                TcpStream::connect(format!("server.duinocoin.com:2813")).await.unwrap()
+            }
+        };
     let mut buf = vec![0; 1024];
     tcpstream.read(&mut buf).await.unwrap();
     println!("Server version is: {}", String::from_utf8_lossy(&buf));
@@ -93,9 +98,14 @@ async fn main() {
             let args = args.clone();
             let resp = resp.clone();
             threads_vec.push(tokio::spawn(async move {
-                let mut tcpstream = TcpStream::connect(format!("{}:{}", resp.ip, resp.port))
-                .await
-                .unwrap();
+                let mut tcpstream = match tokio::time::timeout(Duration::from_secs(3), TcpStream::connect(format!("{}:{}", resp.ip, resp.port))
+        ).await {
+            Ok(socket) => socket.unwrap(),
+            Err(_) => {
+                println!("Can't connect to the assigned pool");
+                TcpStream::connect(format!("server.duinocoin.com:2813")).await.unwrap()
+            }
+        };
             let mut buf = vec![0; 1024];
             tcpstream.read(&mut buf).await.unwrap();
             println!("Server version is: {}", String::from_utf8_lossy(&buf));
