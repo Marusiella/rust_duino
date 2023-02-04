@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 # tungstenite = "0.17.2"
-tokio = { version = "1.17.0", features = ["full"] }
+tokio = { version = "1.18.5", features = ["full"] }
 # url = "*"
 # futures-util = "*"
 # futures-channel = "*"
